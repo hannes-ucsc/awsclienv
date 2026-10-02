@@ -1,0 +1,310 @@
+#!/bin/bash
+
+# Manage side-by-side installations of the AWS CLI v2 on macOS.
+#
+# Invoked as `awsclienv`, this script installs releases and wires itself into
+# the shell. Invoked as `aws` or `aws_completer`, names it links to itself, it
+# runs the executable of that name from the selected release. The selected
+# release is the one named by AWSCLIENV_VERSION or, if that variable is not
+# set, the most recent installed one.
+#
+# Releases are installed from the official macOS package, each relocated to a
+# directory of its own below ~/.awsclienv/versions by a choices file. That
+# relocation also makes the installation per-user, so none of this needs root.
+
+set -o errexit -o nounset -o pipefail
+
+versions=$HOME/.awsclienv/versions
+changelog_url=https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst
+
+# The name this script was invoked by, and the directory that name lives in,
+# which is where its other names live, too
+name=$(basename "$0")
+bin=$(cd "$(dirname "$0")" && pwd)
+
+usage() {
+	cat <<EOF
+Usage:
+  awsclienv activate
+      Link the shims and register their completions in bash's startup file
+  awsclienv install
+      Install the release named by AWSCLIENV_VERSION, or the most recent
+      release there is if that variable is not set
+  awsclienv list
+      Print an AWSCLIENV_VERSION assignment per installed release, oldest
+      first
+  awsclienv deactivate
+      Unlink the shims and remove the line that activate added
+EOF
+}
+
+check_no_args() {
+	local subcommand=$1
+	shift
+	if test $# -ne 0; then
+		echo "The $subcommand subcommand takes no arguments: $*" >&2
+		usage >&2
+		exit 1
+	fi
+}
+
+# The installed releases, one per line, oldest first. Sorting by numeric
+# version component, not lexicographically, so that 2.36.9 precedes 2.36.38.
+installed_versions() {
+	for dir in "$versions"/*; do
+		if test -x "$dir/aws-cli/aws"; then
+			basename "$dir"
+		fi
+	done | sort -t. -k1,1n -k2,2n -k3,3n
+}
+
+no_release_installed() {
+	echo "No AWS CLI v2 release is currently installed." >&2
+	echo "Run 'awsclienv install' to install one." >&2
+}
+
+# The release to run, which is empty only if the variable is unset and no
+# release is installed
+selected_version() {
+	if test -n "${AWSCLIENV_VERSION:-}"; then
+		echo "$AWSCLIENV_VERSION"
+	else
+		local installed
+		installed=$(installed_versions)
+		echo "${installed##*$'\n'}"
+	fi
+}
+
+# The most recent release there is, which the CHANGELOG names in its first few
+# lines, so that a range request over those suffices. The response is captured
+# before being parsed, because an awk that stopped reading early would leave
+# curl with a broken pipe, and that fails the whole pipeline under pipefail.
+latest_version() {
+	local head version
+	head=$(curl --fail --silent --show-error --location \
+		--header 'Range: bytes=0-200' \
+		"$changelog_url")
+	version=$(
+		awk 'prev ~ /^[0-9]+\.[0-9]+\.[0-9]+$/ && /^=+$/ { print prev; exit }
+		     { prev = $0 }' <<< "$head"
+	)
+	if test -z "$version"; then
+		echo "Could not tell the latest release from $changelog_url" >&2
+		exit 1
+	else
+		echo "$version"
+	fi
+}
+
+# Everything but the assignments goes to stderr, leaving stdout machine
+# readable, and evaluable at that
+available_releases() {
+	echo >&2
+	echo "Releases available for installation are listed at" >&2
+	echo >&2
+	echo "$changelog_url" >&2
+	echo >&2
+}
+
+list_versions() {
+	local installed
+	installed=$(installed_versions)
+	available_releases
+	if test -z "$installed"; then
+		no_release_installed
+		exit 1
+	else
+		echo "To pin this shell to a locally installed release, copy one of" >&2
+		echo "the commands listed below and paste it into the shell prompt." >&2
+		echo >&2
+		# As assignments, so that a line can be copied into the shell as is
+		sed 's/^/export AWSCLIENV_VERSION=/' <<< "$installed"
+	fi
+}
+
+run() {
+	local version
+	version=$(selected_version)
+	if test -z "$version"; then
+		no_release_installed
+		exit 1
+	elif test -x "$versions/$version/aws-cli/$name"; then
+		exec "$versions/$version/aws-cli/$name" "$@"
+	elif test -d "$versions/$version"; then
+		echo "AWS CLI v2 release $version does not provide $name." >&2
+		exit 1
+	else
+		echo "AWS CLI v2 release $version is not installed." >&2
+		echo "Run 'awsclienv install' to install it." >&2
+		exit 1
+	fi
+}
+
+install_release() {
+	local version prefix tmp
+	if test -n "${AWSCLIENV_VERSION:-}"; then
+		version=$AWSCLIENV_VERSION
+	else
+		version=$(latest_version)
+		echo "AWSCLIENV_VERSION is not set, so installing the latest release"
+	fi
+	prefix=$versions/$version
+	if test -x "$prefix/aws-cli/aws"; then
+		echo "AWS CLI $version is already installed in $prefix"
+	else
+		tmp=$(mktemp -d)
+		trap 'rm -rf "$tmp"' EXIT
+		curl --fail --location --output "$tmp/awscli.pkg" \
+			"https://awscli.amazonaws.com/AWSCLIV2-$version.pkg"
+		cat > "$tmp/choices.xml" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<array>
+		<dict>
+			<key>choiceAttribute</key>
+			<string>customLocation</string>
+			<key>attributeSetting</key>
+			<string>$prefix</string>
+			<key>choiceIdentifier</key>
+			<string>default</string>
+		</dict>
+	</array>
+</plist>
+EOF
+		# The installer rejects the choices file unless the custom location
+		# exists, so the directory is created up front, and removed again if
+		# the install fails, leaving no half-installed release behind.
+		mkdir -p "$prefix"
+		trap 'rm -rf "$tmp" "$prefix"' EXIT
+		installer -pkg "$tmp/awscli.pkg" \
+			-target CurrentUserHomeDirectory \
+			-applyChoiceChangesXML "$tmp/choices.xml"
+		# Cleared before returning, because the trap would otherwise run at
+		# exit, by which time these local variables are long out of scope
+		trap - EXIT
+		rm -rf "$tmp"
+		echo "AWS CLI $version is now installed in $prefix"
+	fi
+}
+
+# The bash startup file, which need not exist yet. A macOS terminal starts a
+# login shell, which reads .bash_profile and falls back to .bashrc only by way
+# of the user sourcing it there, so .bash_profile is preferred and created if
+# neither file exists.
+startup_file() {
+	if test -f "$HOME/.bash_profile"; then
+		echo "$HOME/.bash_profile"
+	elif test -f "$HOME/.bashrc"; then
+		echo "$HOME/.bashrc"
+	else
+		echo "$HOME/.bash_profile"
+	fi
+}
+
+link_shims() {
+	local shim
+	for shim in aws aws_completer; do
+		if test -e "$bin/$shim"; then
+			echo "$bin/$shim exists already, leaving it alone"
+		else
+			ln -s awsclienv "$bin/$shim"
+			echo "Linked $bin/$shim to awsclienv"
+		fi
+	done
+}
+
+# The inverse of link_shims, removing only what that function would have
+# created and leaving anything else of the same name alone
+unlink_shims() {
+	local shim
+	for shim in aws aws_completer; do
+		if test -L "$bin/$shim" && test "$(readlink "$bin/$shim")" = awsclienv; then
+			rm "$bin/$shim"
+			echo "Unlinked $bin/$shim"
+		elif test -e "$bin/$shim" || test -L "$bin/$shim"; then
+			echo "$bin/$shim is not a link to awsclienv, leaving it alone"
+		else
+			echo "$bin/$shim does not exist, leaving it alone"
+		fi
+	done
+}
+
+# The line that activate adds to the startup file and deactivate removes from
+# it. The shims are named rather than spelled out, because the PATH entry that
+# install.bash adds is what makes them reachable.
+activation_line() {
+	echo 'complete -C aws_completer aws'
+}
+
+activate() {
+	local file line
+	file=$(startup_file)
+	line=$(activation_line)
+	link_shims
+	if test -f "$file" && grep -qF "$line" "$file"; then
+		echo "$file invokes awsclienv already, leaving it alone"
+	else
+		printf '\n%s\n' "$line" >> "$file"
+		echo "Added to $file:"
+		echo "    $line"
+	fi
+	echo "Open a new shell for this to take effect, or run 'hash -r' in"
+	echo "this one to pick up the change to the shims right away."
+}
+
+deactivate() {
+	local file line tmp
+	file=$(startup_file)
+	line=$(activation_line)
+	unlink_shims
+	if test -f "$file" && grep -qF "$line" "$file"; then
+		tmp=$(mktemp)
+		trap 'rm -f "$tmp"' EXIT
+		# Takes the empty line that activate put in front of its line with it,
+		# while leaving empty lines elsewhere in the file alone
+		awk -v target="$line" '
+			/^$/ { if (held) print ""; held = 1; next }
+			$0 == target { held = 0; next }
+			{ if (held) print ""; held = 0; print }
+			END { if (held) print "" }
+		' "$file" > "$tmp"
+		# Written back in place, rather than moved over, so that the startup
+		# file keeps its own permissions
+		cat "$tmp" > "$file"
+		trap - EXIT
+		rm -f "$tmp"
+		echo "Removed from $file:"
+		echo "    $line"
+	else
+		echo "$file does not invoke awsclienv, leaving it alone"
+	fi
+	echo "Open a new shell for this to take effect, or run 'hash -r' in"
+	echo "this one to pick up the change to the shims right away."
+}
+
+if test "$name" != awsclienv; then
+	run "$@"
+elif test $# -eq 0; then
+	usage
+else
+	subcommand=$1
+	shift
+	if test "$subcommand" = activate; then
+		check_no_args "$subcommand" "$@"
+		activate
+	elif test "$subcommand" = install; then
+		check_no_args "$subcommand" "$@"
+		install_release
+	elif test "$subcommand" = list; then
+		check_no_args "$subcommand" "$@"
+		list_versions
+	elif test "$subcommand" = deactivate; then
+		check_no_args "$subcommand" "$@"
+		deactivate
+	else
+		echo "Unknown subcommand: $subcommand" >&2
+		usage >&2
+		exit 1
+	fi
+fi
