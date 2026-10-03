@@ -157,6 +157,16 @@ Only the `bin` directory is on your `PATH`, and the two shims in it are
 symlinks to `awsclienv`, which runs the executable of the same name from the
 selected release. No release is ever on your `PATH`.
 
+To reclaim the space taken by releases you no longer use:
+
+```bash
+awsclienv purge
+```
+
+That deletes every installed release but the one `AWSCLIENV_VERSION` names,
+or the most recent one if the variable is not set. It refuses to run if the
+release named is not installed, rather than leaving you with none at all.
+
 To remove one release in particular, delete its directory:
 
 ```bash

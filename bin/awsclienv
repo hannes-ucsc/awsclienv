@@ -33,6 +33,9 @@ Usage:
   awsclienv list
       Print an AWSCLIENV_VERSION assignment per installed release, oldest
       first
+  awsclienv purge
+      Delete every installed release but the one that AWSCLIENV_VERSION
+      names, or the most recent one if that variable is not set
   awsclienv deactivate
       Unlink the shims and remove the line that activate added
 EOF
@@ -119,6 +122,31 @@ list_versions() {
 		echo >&2
 		# As assignments, so that a line can be copied into the shell as is
 		sed 's/^/export AWSCLIENV_VERSION=/' <<< "$installed"
+	fi
+}
+
+purge_releases() {
+	local keep installed version
+	keep=$(selected_version)
+	if test -z "$keep"; then
+		no_release_installed
+		exit 1
+	elif test ! -d "$versions/$keep"; then
+		# Purging towards a release that isn't there would delete every
+		# release and leave none, which is never what was meant
+		echo "AWS CLI v2 release $keep is not installed, so purging would" >&2
+		echo "leave none at all. Install it, or unset AWSCLIENV_VERSION." >&2
+		exit 1
+	else
+		installed=$(installed_versions)
+		while read -r version; do
+			if test "$version" = "$keep"; then
+				echo "Kept $versions/$version"
+			else
+				rm -rf "${versions:?}/${version:?}"
+				echo "Deleted $versions/$version"
+			fi
+		done <<< "$installed"
 	fi
 }
 
@@ -299,6 +327,9 @@ else
 	elif test "$subcommand" = list; then
 		check_no_args "$subcommand" "$@"
 		list_versions
+	elif test "$subcommand" = purge; then
+		check_no_args "$subcommand" "$@"
+		purge_releases
 	elif test "$subcommand" = deactivate; then
 		check_no_args "$subcommand" "$@"
 		deactivate
