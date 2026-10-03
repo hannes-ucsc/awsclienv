@@ -2,12 +2,11 @@
 
 Install and switch between specific releases of the AWS CLI v2 on macOS.
 
-AWS publishes a macOS package per release, but installing it replaces
-whatever is already there, so pinning a particular release — and working on
-two projects that pin different ones — means re-running the installer by
-hand. `awsclienv` installs each release into a directory of its own and picks
-between them with an environment variable, similar to what `pyenv` does for 
-Python, and `tfenv` for Terraform.
+AWS publishes a macOS package per release, but installing it replaces the
+previously installed version. `awsclienv` manages multiple versions installed
+side-by-side, allowing you to select one of them by setting an environment
+variable. This is similar to what `pyenv` does for Python, and `tfenv` for
+Terraform.
 
 
 ## Requirements
@@ -21,70 +20,37 @@ macOS and Bash.
 curl -fsSL https://raw.githubusercontent.com/hannes-ucsc/awsclienv/main/install.bash | bash
 ```
 
-That downloads `awsclienv` to `~/.awsclienv/bin` and puts that directory on
-your `PATH`, by appending a line to your bash startup file. To effectuate the
+This downloads `awsclienv` to `~/.awsclienv/bin` and puts that directory on
+your `PATH` by appending a line to your bash startup file. To effectuate the
 `PATH` change, close the shell and start a new one.
+
+If you'd rather not download code and run it without prior review, see
+[Installing by hand](#installing-by-hand).
 
 **At this point, your existing installations of the AWS CLI v2 are not yet
 affected. Uninstall them now, otherwise the next step may not work.**
 
-Then, to let `awsclienv` take control of your installed AWS CLI v2 versions,
-run:
+To let `awsclienv` take control of your installed AWS CLI v2 versions, run:
 
 ```bash
 awsclienv activate
 ```
 
 That links the `aws` and `aws_completer` shims, and registers tab completion
-for Bash. Open a new shell once more for that to take effect, then confirm
-that the shims have taken over:
+for Bash. Open a new shell once more for those changes to take effect. Then
+confirm that the shims have taken over:
 
 ```bash
 $ type -a aws
 aws is /Users/you/.awsclienv/bin/aws
 ```
 
-One line, naming `~/.awsclienv/bin`, is what you want. Any additional line names
-an installation you should remove, especially if it comes first, as it is the 
-one you will be running, instead of the shims.
+It should print one line, naming `~/.awsclienv/bin`. Any additional lines point
+to installations you should remove, especially if they precede the expected
+line, as they will shadow the shim.
 
-`awsclienv deactivate` reverses this, unlinking the shims and removing the
-line, which hands `aws` back to whatever provided it before. It leaves
-`awsclienv` itself, and the releases it installed, in place.
-
-
-### Installing by hand
-
-The installer does nothing you cannot do yourself. Download `awsclienv`:
-
-```bash
-mkdir -p ~/.awsclienv/bin
-curl -fsSL -o ~/.awsclienv/bin/awsclienv \
-    https://raw.githubusercontent.com/hannes-ucsc/awsclienv/main/bin/awsclienv
-chmod +x ~/.awsclienv/bin/awsclienv
-```
-
-Uninstall your existing installations of the AWS CLI v2, as above, then link
-the shims:
-
-```bash
-ln -s awsclienv ~/.awsclienv/bin/aws
-ln -s awsclienv ~/.awsclienv/bin/aws_completer
-```
-
-and add these lines to your startup file:
-
-```bash
-export PATH="$HOME/.awsclienv/bin:$PATH"
-complete -C aws_completer aws
-```
-
-Open a new shell, and confirm that the shims have taken over, as above:
-
-```bash
-$ type -a aws
-aws is /Users/you/.awsclienv/bin/aws
-```
+`awsclienv deactivate` reverses this, removing the shims and deregistering the
+tab completion. It leaves `awsclienv` and any releases it installed in place.
 
 
 ## Usage
@@ -95,12 +61,13 @@ To install the most recent version released by AWS:
 awsclienv install
 ```
 
-The `aws` shim will use the most recent version that is installed locally.  
+By default, the `aws` shim will use the most recent version that is
+installed locally, which in this case is the one we just installed.
 
 ```bash
 $ aws --version
 aws-cli/2.37.9 Python/3.14.6 Darwin/24.6.0 exe/arm64
-````
+```
 
 We recommend that you pin a specific version by setting `AWSCLIENV_VERSION`:
 
@@ -133,10 +100,47 @@ export AWSCLIENV_VERSION=2.37.9
 ```
 
 
-## Where releases live
+## Installing by hand
 
-Each release is installed below `~/.awsclienv/versions`, and takes about
-230 MB:
+The installer does nothing you cannot do yourself. Download `awsclienv`:
+
+```bash
+mkdir -p ~/.awsclienv/bin
+curl -fsSL -o ~/.awsclienv/bin/awsclienv \
+    https://raw.githubusercontent.com/hannes-ucsc/awsclienv/main/bin/awsclienv
+chmod +x ~/.awsclienv/bin/awsclienv
+```
+
+Uninstall your existing installations of the AWS CLI v2, as under
+[Installation](#installation), then link the shims:
+
+```bash
+ln -s awsclienv ~/.awsclienv/bin/aws
+ln -s awsclienv ~/.awsclienv/bin/aws_completer
+```
+
+and add these lines to your startup file:
+
+```bash
+export PATH="$HOME/.awsclienv/bin:$PATH"
+complete -C aws_completer aws
+```
+
+Open a new shell, and confirm that the shims have taken over, as under
+[Installation](#installation):
+
+```bash
+$ type -a aws
+aws is /Users/you/.awsclienv/bin/aws
+```
+
+Continue to the [Usage](#usage) section above.
+
+
+## Where installed releases are located
+
+Each release is installed in a directory underneath `~/.awsclienv/versions`,
+and takes up about 230 MiB of space on disk.
 
 ```
 ~/.awsclienv/
@@ -149,15 +153,18 @@ Each release is installed below `~/.awsclienv/versions`, and takes about
     └── 2.37.1/aws-cli/{aws,aws_completer,…}
 ```
 
-Only `bin` is on your `PATH`, and the two shims in it are symlinks to
-`awsclienv`, which runs the executable of the same name from the selected
-release. No release is ever on your `PATH`.
+Only the `bin` directory is on your `PATH`, and the two shims in it are
+symlinks to `awsclienv`, which runs the executable of the same name from the
+selected release. No release is ever on your `PATH`.
 
-To remove a release, delete its directory:
+To remove one release in particular, delete its directory:
 
 ```bash
 rm -rf ~/.awsclienv/versions/2.36.38
 ```
+
+
+## Deinstallation
 
 To remove `awsclienv` itself, along with every release it installed, start by
 undoing the activation:

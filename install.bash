@@ -12,7 +12,8 @@
 
 set -o errexit -o nounset -o pipefail
 
-base_url=${AWSCLIENV_BASE_URL:-https://raw.githubusercontent.com/hannes-ucsc/awsclienv/main}
+default_base_url=https://raw.githubusercontent.com/hannes-ucsc/awsclienv/main
+base_url=${AWSCLIENV_BASE_URL:-$default_base_url}
 bin=$HOME/.awsclienv/bin
 
 mkdir -p "$bin"
