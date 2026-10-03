@@ -45,10 +45,19 @@ else
 	echo "Added $bin to the PATH in $file"
 fi
 
-# This script runs in a child of the shell that invoked it, so it cannot touch
-# that shell's PATH, only the PATH of shells started from now on
 echo
-echo "Open a new shell, then run"
+# Whether a new shell is needed is a question about the PATH of the shell this
+# script was invoked from, not about the startup file: this script runs in a
+# child of that shell, so it cannot touch its PATH, only the PATH of shells
+# started from now on.
+case ":${PATH:-}:" in
+	*":$bin:"*)
+		echo "Next, run"
+		;;
+	*)
+		echo "Open a new shell, then run"
+		;;
+esac
 echo
 echo "    awsclienv activate"
 echo
