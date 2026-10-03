@@ -189,3 +189,13 @@ the one thing `deactivate` does not account for, and finally:
 ```bash
 rm -rf ~/.awsclienv
 ```
+
+
+## Tests
+
+```bash
+./test/e2e.bash
+```
+
+See the comments at the top of that file for what it covers and what it
+costs.
