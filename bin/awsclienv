@@ -24,19 +24,21 @@ Usage:
   awsclienv activate
       Install the shims and set up tab completion for the AWS CLI
   awsclienv install
-      Install the version specified by AWSCLIENV_VERSION, or, if that variable
-      is not set, the most recent version available
+      Install the version of the AWS CLI specified by AWSCLIENV_VERSION, or, if
+      that variable is not set, the most recent version available
   awsclienv list
-      List the versions installed locally, oldest first
+      List the versions of the AWS CLI installed locally, oldest first
   awsclienv purge
-      Delete every installed version except the one that AWSCLIENV_VERSION
-      specifies, or the most recent installed one if that variable is not set
+      Delete every installed version of the AWS CLI except the one specified by
+      AWSCLIENV_VERSION, or, if that variable is not set, the most recent
+      version that's installed
   awsclienv deactivate
-      Undo the effect of activate
+      Remove the shims and tear down tab completion for the AWS CLI
   awsclienv self-update
-      Replace the installed awsclienv with the current one
+      Replace awsclienv with the most recent version from GitHub
   awsclienv self-remove
-      Undo the effect of the install, the installed versions excepted
+      Undo the effect of the install, leaving in place any local
+      installations of the AWS CLI
 EOF
 }
 
