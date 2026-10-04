@@ -31,6 +31,22 @@ Usage:
 EOF
 }
 
+# The words bash offers when completing `awsclienv`, which are its
+# subcommands, and only where a subcommand goes. They are read back out of the
+# synopsis, so that it stays the one place they are listed.
+complete_subcommand() {
+	local command=$1 word=$2 previous=$3 subcommand
+	if test "$previous" = "$command"; then
+		for subcommand in $(usage | awk '$1 == "awsclienv" { print $2 }'); do
+			case $subcommand in
+				"$word"*)
+					echo "$subcommand"
+					;;
+			esac
+		done
+	fi
+}
+
 check_no_args() {
 	local subcommand=$1
 	shift
@@ -269,7 +285,7 @@ unlink_shims() {
 # it. The shims are referred to by name rather than by path, because the PATH
 # entry that install.bash adds is what makes them reachable.
 activation_line() {
-	echo 'complete -C aws_completer aws'
+	echo 'complete -C aws_completer aws; complete -C awsclienv awsclienv'
 }
 
 activate() {
@@ -322,6 +338,8 @@ deactivate() {
 
 if test "$name" != awsclienv; then
 	run "$@"
+elif test -n "${COMP_LINE:-}"; then
+	complete_subcommand "${1:-}" "${2:-}" "${3:-}"
 elif test $# -eq 0; then
 	usage
 else

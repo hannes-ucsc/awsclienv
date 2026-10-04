@@ -125,7 +125,7 @@ and add these lines to your startup file:
 
 ```bash
 export PATH="$HOME/.awsclienv/bin:$PATH"
-complete -C aws_completer aws
+complete -C aws_completer aws; complete -C awsclienv awsclienv
 ```
 
 Open a new shell, and confirm that the shims have taken over, as under
