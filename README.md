@@ -199,22 +199,14 @@ older one did not.
 
 ## Deinstallation
 
-To undo the install:
+To completely remove `awsclienv` along with every AWS CLI version it installed:
 
 ```bash
 awsclienv self-remove
 ```
 
-That deactivates first, so that no shim is left pointing at a file about to
-go, then takes back the two lines the install added to your startup file and
-the copy of `awsclienv` it downloaded.
-
-The versions it installed are left where they are, `self-remove` not having
-been the one to put them there. To be rid of those as well:
-
-```bash
-rm -rf ~/.awsclienv
-```
+To part with unused installed versions of the AWS CLI, but keep `awsclienv`,
+see [`awsclienv purge`](#installation-layout) instead.
 
 
 ## Tests

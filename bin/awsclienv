@@ -5,8 +5,9 @@
 
 set -o errexit -o nounset -o pipefail
 
-versions=$HOME/.awsclienv/versions
-install_dir=$HOME/.awsclienv/bin
+awsclienv_dir=$HOME/.awsclienv
+versions=$awsclienv_dir/versions
+install_dir=$awsclienv_dir/bin
 changelog_url=https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst
 default_base_url=https://raw.githubusercontent.com/hannes-ucsc/awsclienv/main
 base_url=${AWSCLIENV_BASE_URL:-$default_base_url}
@@ -37,8 +38,7 @@ Usage:
   awsclienv self-update
       Replace awsclienv with the most recent version from GitHub
   awsclienv self-remove
-      Undo the effect of the install, leaving in place any local
-      installations of the AWS CLI
+      Remove awsclienv and all installed versions of the AWS CLI
 EOF
 }
 
@@ -463,10 +463,12 @@ deactivate() {
 	new_shell_advice
 }
 
-# The inverse of self_install: the lines it added to the startup file, and the
-# copy of awsclienv it downloaded. It deactivates first, so that no shim is
-# left pointing at a file about to go, and it leaves the installed versions
-# where they are, having not been the one to put them there.
+# Removes every trace of awsclienv: the lines the install put in the startup
+# file, what activate added on top of them, and everything below
+# ~/.awsclienv, the versions of the AWS CLI included. Deactivating comes
+# first, so that no shim is left pointing at a file about to go. Unlinking the
+# directory this script is running from is safe, the file it is being read
+# from outliving its name.
 #
 self_remove() {
 	local file
@@ -475,16 +477,11 @@ self_remove() {
 	file=$(startup_file)
 	remove_line "$file" 'export PATH="$HOME/.awsclienv/bin:$PATH"'
 	remove_line "$file" 'complete -C awsclienv awsclienv'
-	if test -f "$install_dir/awsclienv"; then
-		rm "$install_dir/awsclienv"
-		echo "Removed $install_dir/awsclienv"
+	if test -d "$awsclienv_dir"; then
+		rm -rf "${awsclienv_dir:?}"
+		echo "Removed $awsclienv_dir and everything below it"
 	else
-		echo "$install_dir/awsclienv does not exist, leaving it alone"
-	fi
-	rmdir "$install_dir" 2> /dev/null || true
-	if test -d "$versions"; then
-		echo "The versions below $versions are left in place."
-		echo "Delete $HOME/.awsclienv to be rid of them too."
+		echo "$awsclienv_dir does not exist, leaving it alone"
 	fi
 	new_shell_advice
 }

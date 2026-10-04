@@ -225,11 +225,9 @@ removed=$(HOME=$scratch "$scratch/.awsclienv/bin/awsclienv" self-remove)
 echo "$removed"
 same "the startup file no longer mentions awsclienv" \
 	0 "$(grep -c awsclienv "$scratch/.bash_profile" || true)"
-same "awsclienv is gone" \
-	0 "$(test -e "$scratch/.awsclienv/bin/awsclienv" && echo 1 || echo 0)"
-same "the versions are left in place" \
-	1 "$(grep -c "left in place" <<< "$removed" || true)"
-same "and they are still there" \
-	"$pinned" "$(ls "$scratch/.awsclienv/versions" | tr '\n' ' ' | sed 's/ $//')"
+same "the versions go with it" \
+	0 "$(test -e "$scratch/.awsclienv/versions" && echo 1 || echo 0)"
+same "and nothing below ~/.awsclienv is left" \
+	0 "$(test -e "$scratch/.awsclienv" && echo 1 || echo 0)"
 
 say "passed"
