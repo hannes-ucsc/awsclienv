@@ -185,6 +185,10 @@ same "list is oldest first" "$pinned $latest" "$listed"
 same "with nothing asked for, the most recent is the default" \
 	"export AWSCLIENV_VERSION=$latest  # default" \
 	"$(in_shell 'awsclienv list 2>/dev/null' | grep '#')"
+same "a version asked for but absent is listed as such" \
+	"export AWSCLIENV_VERSION=9.9.9  # selected, not installed" \
+	"$(in_shell 'AWSCLIENV_VERSION=9.9.9 awsclienv list 2>/dev/null' \
+		| grep '#')"
 same "and a version asked for is the selected one" \
 	"export AWSCLIENV_VERSION=$pinned  # selected" \
 	"$(in_shell "AWSCLIENV_VERSION=$pinned awsclienv list 2>/dev/null" \
