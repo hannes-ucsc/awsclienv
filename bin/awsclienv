@@ -83,6 +83,17 @@ no_version_installed() {
 	echo "Run 'awsclienv install' to install one." >&2
 }
 
+# Why the version in use is in use: because it was asked for, or because
+# nothing was
+#
+version_source() {
+	if test -n "${AWSCLIENV_VERSION:-}"; then
+		echo selected
+	else
+		echo default
+	fi
+}
+
 # The version to run, which is empty only if the variable is unset and no
 # version is installed
 #
@@ -130,7 +141,7 @@ available_versions() {
 }
 
 list_versions() {
-	local installed current version
+	local installed current version mark
 	installed=$(installed_versions)
 	available_versions
 	if test -z "$installed"; then
@@ -141,12 +152,14 @@ list_versions() {
 		echo "the commands listed below and paste it into the shell prompt" >&2
 		echo >&2
 		# As assignments, so that a line can be copied into the shell as is.
-		# The mark on the current one is a comment, which keeps that line as
-		# copyable as the rest.
+		# The mark on the one in use is a comment, which keeps that line as
+		# copyable as the rest, and says whether it is in use because it was
+		# asked for or for want of anything having been.
 		current=$(selected_version)
+		mark="# $(version_source)"
 		while read -r version; do
 			if test "$version" = "$current"; then
-				echo "export AWSCLIENV_VERSION=$version  # current"
+				echo "export AWSCLIENV_VERSION=$version  $mark"
 			else
 				echo "export AWSCLIENV_VERSION=$version"
 			fi
@@ -490,10 +503,11 @@ elif test $# -eq 0; then
 		:
 	elif test -x "$versions/$current/aws-cli/aws"; then
 		echo
-		echo "The current version is $current"
+		echo "The current version is $current ($(version_source))"
 	else
 		echo
-		echo "The current version is $current, which is not installed"
+		echo "The current version is $current ($(version_source))," \
+			"but it is not installed"
 	fi
 	echo
 else

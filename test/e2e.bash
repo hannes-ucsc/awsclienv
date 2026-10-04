@@ -168,13 +168,20 @@ in_shell 'awsclienv list'
 listed=$(in_shell 'awsclienv list 2>/dev/null' \
 	| sed 's/.*=//; s/ *#.*//' | tr '\n' ' ' | sed 's/ $//')
 same "list is oldest first" "$pinned $latest" "$listed"
-same "the version in use is the one marked" \
-	"export AWSCLIENV_VERSION=$latest  # current" \
-	"$(in_shell 'awsclienv list 2>/dev/null' | grep '# current')"
-same "and the pin is marked when one is set" \
-	"export AWSCLIENV_VERSION=$pinned  # current" \
+same "with nothing asked for, the most recent is the default" \
+	"export AWSCLIENV_VERSION=$latest  # default" \
+	"$(in_shell 'awsclienv list 2>/dev/null' | grep '#')"
+same "and a version asked for is the selected one" \
+	"export AWSCLIENV_VERSION=$pinned  # selected" \
 	"$(in_shell "AWSCLIENV_VERSION=$pinned awsclienv list 2>/dev/null" \
-		| grep '# current')"
+		| grep '#')"
+same "the synopsis says so too, by default" \
+	"The current version is $latest (default)" \
+	"$(in_shell 'awsclienv' | grep '^The current version')"
+same "and when a version is asked for" \
+	"The current version is $pinned (selected)" \
+	"$(in_shell "AWSCLIENV_VERSION=$pinned awsclienv" \
+		| grep '^The current version')"
 
 say "13. purge keeps the pin and deletes the rest"
 in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv purge"

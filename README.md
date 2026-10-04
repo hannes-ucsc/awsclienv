@@ -98,11 +98,14 @@ To pin this shell to a locally installed version, copy one of
 the commands listed below and paste it into the shell prompt
 
 export AWSCLIENV_VERSION=2.36.38
-export AWSCLIENV_VERSION=2.37.9  # current
+export AWSCLIENV_VERSION=2.37.9  # default
 ```
 
 The version in use is marked with a comment, so that line can be copied like
-any other. `awsclienv` on its own prints the synopsis and that version.
+any other. The mark reads `# selected` where `AWSCLIENV_VERSION` asked for
+that version, and `# default` where nothing did. `awsclienv` on its own
+prints the synopsis and the version in use, with `(selected)` or `(default)`
+for the same reason.
 
 
 ## Installing by hand
