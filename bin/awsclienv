@@ -495,6 +495,7 @@ elif test $# -eq 0; then
 		echo
 		echo "The current version is $current, which is not installed"
 	fi
+	echo
 else
 	subcommand=$1
 	shift
