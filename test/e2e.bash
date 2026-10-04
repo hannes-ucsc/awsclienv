@@ -134,14 +134,16 @@ same "a prefix narrows it" \
 same "and nothing is offered after a subcommand" \
 	"" "$(complete_as 'install ' '' install)"
 
-say "7. with no version installed, aws and purge say so and fail"
+say "7. with no version installed, aws fails where list and purge do not"
 no_version="No AWS CLI v2 version is currently installed"
 expect_failure aws 'aws --version' "$no_version"
-expect_failure purge 'awsclienv purge' "$no_version"
-# list is a question, and having nothing to list is an answer to it
-listed=$(in_shell 'awsclienv list') && status=0 || status=$?
-same "list says the same but succeeds" 0 "$status"
-same "saying so" 1 "$(grep -c "$no_version" <<< "$listed" || true)"
+# Nothing to list is an answer, and nothing to purge is nothing gone wrong
+for subcommand in list purge; do
+	out=$(in_shell "awsclienv $subcommand") && status=0 || status=$?
+	same "$subcommand succeeds" 0 "$status"
+	same "saying there is no version" \
+		1 "$(grep -c "$no_version" <<< "$out" || true)"
+done
 
 say "8. that awsclienv installs the most recent AWS CLI version"
 in_shell 'awsclienv install' | grep -Ev '^ *[0-9 %]|Dload|Current'

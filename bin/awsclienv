@@ -180,9 +180,10 @@ list_versions() {
 purge_versions() {
 	local keep installed version
 	keep=$(selected_version)
+	# Nothing to purge is nothing to go wrong, as against a version to keep
+	# that is not there, which is an instruction that cannot be carried out
 	if test -z "$keep"; then
 		no_version_installed
-		exit 1
 	elif test ! -d "$versions/$keep"; then
 		# Purging towards a version that isn't there would delete every
 		# version and leave none, which is never what was meant
