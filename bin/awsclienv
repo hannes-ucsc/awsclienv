@@ -296,7 +296,7 @@ activation_line() {
 # runs this. It downloads rather than copies itself, the shell having consumed
 # the pipe already, leaving nothing on disk to copy from.
 self_install() {
-	local file line
+	local file line new_shell=false
 	mkdir -p "$install_dir"
 	curl --fail --silent --show-error --location \
 		--output "$install_dir/awsclienv.download" \
@@ -318,26 +318,31 @@ self_install() {
 		echo "Added $install_dir to the PATH in $file"
 	fi
 
+	# The shell that ran this has the PATH it started with, which this script,
+	# being a child of it, cannot change
+	case ":${PATH:-}:" in
+		*":$install_dir:"*)
+			;;
+		*)
+			new_shell=true
+			;;
+	esac
+
 	line='complete -C awsclienv awsclienv'
 	if test -f "$file" && grep -qF "$line" "$file"; then
 		echo "$file completes awsclienv already"
 	else
 		printf '%s\n' "$line" >> "$file"
 		echo "Added completion for awsclienv to $file"
+		new_shell=true
 	fi
 
 	echo
-	# Whether a new shell is needed is a question about the PATH of the shell
-	# that ran this, which it cannot change, only that of shells started from
-	# now on
-	case ":${PATH:-}:" in
-		*":$install_dir:"*)
-			echo "Next, run 'awsclienv activate'"
-			;;
-		*)
-			echo "Open a new shell, then run 'awsclienv activate'"
-			;;
-	esac
+	if test "$new_shell" = true; then
+		echo "Open a new shell, then run 'awsclienv activate'"
+	else
+		echo "Next, run 'awsclienv activate'"
+	fi
 	echo
 }
 
