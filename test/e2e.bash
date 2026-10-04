@@ -151,6 +151,22 @@ for subcommand in list purge; do
 	same "saying there is no version" \
 		1 "$(grep -c "$no_version" <<< "$out" || true)"
 done
+same "and the synopsis has no version to report" \
+	0 "$(in_shell 'awsclienv' | grep -c '^The current version' || true)"
+
+# The same, with a version asked for that is not installed either
+absent="AWS CLI v2 version 9.9.9 is not installed"
+expect_failure aws 'AWSCLIENV_VERSION=9.9.9 aws --version' "$absent"
+for subcommand in list purge; do
+	out=$(in_shell "AWSCLIENV_VERSION=9.9.9 awsclienv $subcommand") \
+		&& status=0 || status=$?
+	same "$subcommand succeeds with one asked for" 0 "$status"
+	same "saying there is none installed" \
+		1 "$(grep -c "$no_version" <<< "$out" || true)"
+done
+same "and the synopsis says the one asked for is absent" \
+	"The current version is 9.9.9 (selected), but it is not installed" \
+	"$(in_shell 'AWSCLIENV_VERSION=9.9.9 awsclienv' | grep '^The current')"
 
 say "8. that awsclienv installs the most recent AWS CLI version"
 in_shell 'awsclienv install' | grep -Ev '^ *[0-9 %]|Dload|Current'
@@ -160,6 +176,8 @@ say "9. the shims step 4 linked run the version step 8 installed"
 in_shell 'type -a aws; aws --version'
 in_shell 'COMP_LINE="aws s3 l" COMP_POINT=8 aws_completer'
 same "shim runs the installed version" "$latest" "$(version_of_aws '')"
+expect_failure aws 'AWSCLIENV_VERSION=9.9.9 aws --version' \
+	"AWS CLI v2 version 9.9.9 is not installed"
 
 say "10. a second version, pinned with AWSCLIENV_VERSION"
 in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv install" \
@@ -213,6 +231,10 @@ same "and when a version is asked for" \
 	"The current version is $pinned (selected)" \
 	"$(in_shell "AWSCLIENV_VERSION=$pinned awsclienv" \
 		| grep '^The current version')"
+same "and when the one asked for is not installed" \
+	"The current version is 9.9.9 (selected), but it is not installed" \
+	"$(in_shell 'AWSCLIENV_VERSION=9.9.9 awsclienv' \
+		| grep '^The current version')"
 
 say "14. purge keeps the pin and deletes the rest"
 in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv purge"
@@ -223,6 +245,13 @@ stub_version 1.0.0
 in_shell "export AWSCLIENV_VERSION=9.9.9; awsclienv purge"
 same "a version that is not installed excepts nothing" \
 	"" "$(ls "$scratch/.awsclienv/versions")"
+# With nothing asked for, the most recent is what survives
+stub_version 1.0.0
+stub_version 2.0.0
+in_shell 'awsclienv purge'
+same "with nothing asked for, the most recent survives" \
+	2.0.0 "$(ls "$scratch/.awsclienv/versions")"
+rm -rf "$scratch/.awsclienv/versions"
 # Put one back, the steps below having something to say about versions
 stub_version "$pinned"
 
