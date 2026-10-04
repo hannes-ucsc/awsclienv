@@ -166,8 +166,15 @@ same "and the version itself is untouched" \
 say "12. list reports both, oldest first"
 in_shell 'awsclienv list'
 listed=$(in_shell 'awsclienv list 2>/dev/null' \
-	| sed 's/.*=//' | tr '\n' ' ' | sed 's/ $//')
+	| sed 's/.*=//; s/ *#.*//' | tr '\n' ' ' | sed 's/ $//')
 same "list is oldest first" "$pinned $latest" "$listed"
+same "the version in use is the one marked" \
+	"export AWSCLIENV_VERSION=$latest  # current" \
+	"$(in_shell 'awsclienv list 2>/dev/null' | grep '# current')"
+same "and the pin is marked when one is set" \
+	"export AWSCLIENV_VERSION=$pinned  # current" \
+	"$(in_shell "AWSCLIENV_VERSION=$pinned awsclienv list 2>/dev/null" \
+		| grep '# current')"
 
 say "13. purge keeps the pin and deletes the rest"
 in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv purge"

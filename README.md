@@ -95,11 +95,14 @@ Versions available for installation are listed at
 https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst
 
 To pin this shell to a locally installed version, copy one of
-the commands listed below and paste it into the shell prompt.
+the commands listed below and paste it into the shell prompt
 
 export AWSCLIENV_VERSION=2.36.38
-export AWSCLIENV_VERSION=2.37.9
+export AWSCLIENV_VERSION=2.37.9  # current
 ```
+
+The version in use is marked with a comment, so that line can be copied like
+any other. `awsclienv` on its own prints the synopsis and that version.
 
 
 ## Installing by hand

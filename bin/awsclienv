@@ -130,7 +130,7 @@ available_versions() {
 }
 
 list_versions() {
-	local installed
+	local installed current version
 	installed=$(installed_versions)
 	available_versions
 	if test -z "$installed"; then
@@ -140,8 +140,17 @@ list_versions() {
 		echo "To pin this shell to a locally installed version, copy one of" >&2
 		echo "the commands listed below and paste it into the shell prompt" >&2
 		echo >&2
-		# As assignments, so that a line can be copied into the shell as is
-		sed 's/^/export AWSCLIENV_VERSION=/' <<< "$installed"
+		# As assignments, so that a line can be copied into the shell as is.
+		# The mark on the current one is a comment, which keeps that line as
+		# copyable as the rest.
+		current=$(selected_version)
+		while read -r version; do
+			if test "$version" = "$current"; then
+				echo "export AWSCLIENV_VERSION=$version  # current"
+			else
+				echo "export AWSCLIENV_VERSION=$version"
+			fi
+		done <<< "$installed"
 	fi
 }
 
@@ -476,6 +485,16 @@ elif test -n "${COMP_LINE:-}"; then
 	complete_subcommand "${1:-}" "${2:-}" "${3:-}"
 elif test $# -eq 0; then
 	usage
+	current=$(selected_version)
+	if test -z "$current"; then
+		:
+	elif test -x "$versions/$current/aws-cli/aws"; then
+		echo
+		echo "The current version is $current"
+	else
+		echo
+		echo "The current version is $current, which is not installed"
+	fi
 else
 	subcommand=$1
 	shift
