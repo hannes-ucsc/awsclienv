@@ -22,6 +22,8 @@ set -o errexit -o nounset -o pipefail
 # Any published version older than the most recent one will do
 pinned=2.36.38
 
+changelog=https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst
+
 path_line='export PATH="$HOME/.awsclienv/bin:$PATH"'
 
 repo=$(cd "$(dirname "$0")/.." && pwd)
@@ -163,7 +165,19 @@ same "it says the version is already installed" \
 same "and the version itself is untouched" \
 	"$before" "$(stat -f %m "$scratch/.awsclienv/versions/$pinned")"
 
-say "12. list reports both, oldest first"
+say "12. installing a version that does not exist says so, and where to look"
+missing=$(HOME=$scratch bash -l -c \
+	'AWSCLIENV_VERSION=9.9.9 awsclienv install' 2>&1) && status=0 || status=$?
+echo "$missing"
+same "it fails" 1 "$status"
+same "naming the version" \
+	1 "$(grep -c "Could not download AWS CLI v2 version 9.9.9" <<< "$missing")"
+same "and pointing at the versions there are" \
+	1 "$(grep -cF "$changelog" <<< "$missing")"
+same "with no half-installed version left behind" \
+	0 "$(test -e "$scratch/.awsclienv/versions/9.9.9" && echo 1 || echo 0)"
+
+say "13. list reports both, oldest first"
 in_shell 'awsclienv list'
 listed=$(in_shell 'awsclienv list 2>/dev/null' \
 	| sed 's/.*=//; s/ *#.*//' | tr '\n' ' ' | sed 's/ $//')
@@ -183,12 +197,12 @@ same "and when a version is asked for" \
 	"$(in_shell "AWSCLIENV_VERSION=$pinned awsclienv" \
 		| grep '^The current version')"
 
-say "13. purge keeps the pin and deletes the rest"
+say "14. purge keeps the pin and deletes the rest"
 in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv purge"
 same "only the pin remains" \
 	"$pinned" "$(ls "$scratch/.awsclienv/versions" | tr '\n' ' ' | sed 's/ $//')"
 
-say "14. self-update replaces the installed awsclienv"
+say "15. self-update replaces the installed awsclienv"
 update() {
 	HOME=$scratch AWSCLIENV_BASE_URL="file://$repo" \
 		"$scratch/.awsclienv/bin/awsclienv" self-update
@@ -204,10 +218,10 @@ updated=$(update)
 same "an update that changes nothing says nothing of a new shell" \
 	0 "$(grep -c "Open a new shell" <<< "$updated" || true)"
 
-say "15. deactivate unwinds step 4"
+say "16. deactivate unwinds step 4"
 in_shell 'awsclienv deactivate; type -a aws || echo "aws: gone, as expected"'
 
-say "16. running deactivate again leaves everything alone and says so"
+say "17. running deactivate again leaves everything alone and says so"
 again=$(in_shell 'awsclienv deactivate')
 echo "$again"
 same "both shims are gone already" \
@@ -217,7 +231,7 @@ same "the startup file is left alone" \
 same "and nothing is said about a new shell" \
 	0 "$(grep -c "Open a new shell" <<< "$again" || true)"
 
-say "17. self-remove takes back what the install added"
+say "18. self-remove takes back what the install added"
 # Last, because it deletes the awsclienv under test: a later step that
 # looked it up on the PATH would find the one installed on this machine
 # and act on that instead

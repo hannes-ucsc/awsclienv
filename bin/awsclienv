@@ -226,8 +226,15 @@ install_version() {
 	else
 		tmp=$(mktemp -d)
 		trap 'rm -rf "$tmp"' EXIT
-		curl --fail --location --output "$tmp/awscli.pkg" \
-			"https://awscli.amazonaws.com/AWSCLIV2-$version.pkg"
+		# curl says what went wrong, down to the status where the server
+		# answered at all, but not what it was we wanted, nor where to look
+		# for a version that exists
+		if ! curl --fail --location --output "$tmp/awscli.pkg" \
+				"https://awscli.amazonaws.com/AWSCLIV2-$version.pkg"; then
+			echo "Could not download AWS CLI v2 version $version" >&2
+			available_versions
+			exit 1
+		fi
 		# The choices file is what relocates the package into $prefix. Left
 		# to itself the package installs into /usr/local, which would need
 		# root and would leave no room for a second version.
