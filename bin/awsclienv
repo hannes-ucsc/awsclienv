@@ -146,9 +146,10 @@ list_versions() {
 	local installed current version mark
 	installed=$(installed_versions)
 	available_versions
+	# Having nothing to list is an answer, not a failure, list being a
+	# question where purge and aws are an instruction
 	if test -z "$installed"; then
 		no_version_installed
-		exit 1
 	else
 		echo "To pin this shell to a locally installed version, copy one of" >&2
 		echo "the commands listed below and paste it into the shell prompt" >&2

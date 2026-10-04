@@ -138,6 +138,10 @@ say "7. with no version installed, aws and purge say so and fail"
 no_version="No AWS CLI v2 version is currently installed"
 expect_failure aws 'aws --version' "$no_version"
 expect_failure purge 'awsclienv purge' "$no_version"
+# list is a question, and having nothing to list is an answer to it
+listed=$(in_shell 'awsclienv list') && status=0 || status=$?
+same "list says the same but succeeds" 0 "$status"
+same "saying so" 1 "$(grep -c "$no_version" <<< "$listed" || true)"
 
 say "8. that awsclienv installs the most recent AWS CLI version"
 in_shell 'awsclienv install' | grep -Ev '^ *[0-9 %]|Dload|Current'
