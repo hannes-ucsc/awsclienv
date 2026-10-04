@@ -125,7 +125,7 @@ complete_as() {
 	in_shell "COMP_LINE='awsclienv $1' awsclienv awsclienv '$2' '$3'"
 }
 same "an empty word offers every subcommand" \
-	"activate install list purge deactivate" \
+	"activate install list purge deactivate self-remove" \
 	"$(complete_as '' '' awsclienv | tr '\n' ' ' | sed 's/ $//')"
 same "a prefix narrows it" \
 	deactivate "$(complete_as de de awsclienv)"
@@ -183,8 +183,23 @@ echo "$again"
 same "both shims are gone already" \
 	2 "$(grep -c "does not exist, leaving it alone" <<< "$again" || true)"
 same "the startup file is left alone" \
-	1 "$(grep -c "does not invoke awsclienv" <<< "$again" || true)"
+	1 "$(grep -c "does not have this line" <<< "$again" || true)"
 same "and nothing is said about a new shell" \
 	0 "$(grep -c "Open a new shell" <<< "$again" || true)"
+
+say "16. self-remove takes back what the install added"
+# Last, because it deletes the awsclienv under test: a later step that
+# looked it up on the PATH would find the one installed on this machine
+# and act on that instead
+removed=$(HOME=$scratch "$scratch/.awsclienv/bin/awsclienv" self-remove)
+echo "$removed"
+same "the startup file no longer mentions awsclienv" \
+	0 "$(grep -c awsclienv "$scratch/.bash_profile" || true)"
+same "awsclienv is gone" \
+	0 "$(test -e "$scratch/.awsclienv/bin/awsclienv" && echo 1 || echo 0)"
+same "the versions are left in place" \
+	1 "$(grep -c "left in place" <<< "$removed" || true)"
+same "and they are still there" \
+	"$pinned" "$(ls "$scratch/.awsclienv/versions" | tr '\n' ' ' | sed 's/ $//')"
 
 say "passed"

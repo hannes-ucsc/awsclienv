@@ -181,15 +181,18 @@ rm -rf ~/.awsclienv/versions/2.36.38
 
 ## Deinstallation
 
-To remove `awsclienv` itself, along with every version it installed, start by
-undoing the activation:
+To undo the install:
 
 ```bash
-awsclienv deactivate
+awsclienv self-remove
 ```
 
-Then delete the two lines the install added to your startup file, which are
-the one thing `deactivate` does not account for, and finally:
+That deactivates first, so that no shim is left pointing at a file about to
+go, then takes back the two lines the install added to your startup file and
+the copy of `awsclienv` it downloaded.
+
+The versions it installed are left where they are, `self-remove` not having
+been the one to put them there. To be rid of those as well:
 
 ```bash
 rm -rf ~/.awsclienv

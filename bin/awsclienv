@@ -32,6 +32,8 @@ Usage:
       specifies, or the most recent installed one if that variable is not set
   awsclienv deactivate
       Undo the effect of activate
+  awsclienv self-remove
+      Undo the effect of the install, the installed versions excepted
 EOF
 }
 
@@ -363,17 +365,13 @@ activate() {
 	new_shell_advice
 }
 
-deactivate() {
-	local file line tmp
-	changed=false
-	file=$(startup_file)
-	line=$(activation_line)
-	unlink_shims
+# Takes the empty line that may precede the given one with it, while leaving
+# empty lines elsewhere in the file alone
+remove_line() {
+	local file=$1 line=$2 tmp
 	if test -f "$file" && grep -qF "$line" "$file"; then
 		tmp=$(mktemp)
 		trap 'rm -f "$tmp"' EXIT
-		# Takes the empty line that activate put in front of its line with it,
-		# while leaving empty lines elsewhere in the file alone
 		awk -v target="$line" '
 			/^$/ { if (held) print ""; held = 1; next }
 			$0 == target { held = 0; next }
@@ -389,7 +387,45 @@ deactivate() {
 		echo "    $line"
 		changed=true
 	else
-		echo "$file does not invoke awsclienv, leaving it alone"
+		echo "$file does not have this line, leaving it alone:"
+		echo "    $line"
+	fi
+}
+
+_deactivate() {
+	local file
+	file=$(startup_file)
+	unlink_shims
+	remove_line "$file" "$(activation_line)"
+}
+
+deactivate() {
+	changed=false
+	_deactivate
+	new_shell_advice
+}
+
+# The inverse of self_install: the lines it added to the startup file, and the
+# copy of awsclienv it downloaded. It deactivates first, so that no shim is
+# left pointing at a file about to go, and it leaves the installed versions
+# where they are, having not been the one to put them there.
+self_remove() {
+	local file
+	changed=false
+	_deactivate
+	file=$(startup_file)
+	remove_line "$file" 'export PATH="$HOME/.awsclienv/bin:$PATH"'
+	remove_line "$file" 'complete -C awsclienv awsclienv'
+	if test -f "$install_dir/awsclienv"; then
+		rm "$install_dir/awsclienv"
+		echo "Removed $install_dir/awsclienv"
+	else
+		echo "$install_dir/awsclienv does not exist, leaving it alone"
+	fi
+	rmdir "$install_dir" 2> /dev/null || true
+	if test -d "$versions"; then
+		echo "The versions below $versions are left in place."
+		echo "Delete $HOME/.awsclienv to be rid of them too."
 	fi
 	new_shell_advice
 }
@@ -423,6 +459,9 @@ else
 	elif test "$subcommand" = deactivate; then
 		check_no_args "$subcommand" "$@"
 		deactivate
+	elif test "$subcommand" = self-remove; then
+		check_no_args "$subcommand" "$@"
+		self_remove
 	else
 		echo "Unknown subcommand: $subcommand" >&2
 		usage >&2
