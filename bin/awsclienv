@@ -14,6 +14,7 @@ base_url=${AWSCLIENV_BASE_URL:-$default_base_url}
 # The name this script was invoked by, and the directory that name lives in,
 # which is where its other names live, too. Neither means anything when a
 # shell is reading this from a pipe, and neither is consulted then.
+#
 name=$(basename "$0")
 bin=$(cd "$(dirname "$0")" && pwd)
 
@@ -40,6 +41,7 @@ EOF
 # The words bash offers when completing `awsclienv`, which are its
 # subcommands, and only where a subcommand goes. They are read back out of the
 # synopsis, so that it stays the one place they are listed.
+#
 complete_subcommand() {
 	local command=$1 word=$2 previous=$3 subcommand
 	if test "$previous" = "$command"; then
@@ -65,6 +67,7 @@ check_no_args() {
 
 # The installed versions, one per line, oldest first. Sorting by numeric
 # version component, not lexicographically, so that 2.36.9 precedes 2.36.38.
+#
 installed_versions() {
 	for dir in "$versions"/*; do
 		if test -x "$dir/aws-cli/aws"; then
@@ -80,6 +83,7 @@ no_version_installed() {
 
 # The version to run, which is empty only if the variable is unset and no
 # version is installed
+#
 selected_version() {
 	if test -n "${AWSCLIENV_VERSION:-}"; then
 		echo "$AWSCLIENV_VERSION"
@@ -94,6 +98,7 @@ selected_version() {
 # few lines, so that a range request over those suffices. The response is
 # captured before being parsed, because an awk that stopped reading early would
 # leave curl with a broken pipe, failing the whole pipeline under pipefail.
+#
 latest_version() {
 	local head version
 	head=$(curl --fail --silent --show-error --location \
@@ -113,6 +118,7 @@ latest_version() {
 
 # Everything but the assignments goes to stderr, leaving stdout machine
 # readable, and evaluable at that
+#
 available_versions() {
 	echo >&2
 	echo "Versions available for installation are listed at" >&2
@@ -235,6 +241,7 @@ EOF
 # login shell, which reads .bash_profile and falls back to .bashrc only by way
 # of the user sourcing it there, so .bash_profile is preferred and created if
 # neither file exists.
+#
 startup_file() {
 	if test -f "$HOME/.bash_profile"; then
 		echo "$HOME/.bash_profile"
@@ -248,6 +255,7 @@ startup_file() {
 # Raised by the functions below when they actually change something, so that
 # the advice at the end of activate and deactivate is given only when there is
 # something for a new shell to pick up
+#
 changed=false
 
 new_shell_advice() {
@@ -272,6 +280,7 @@ link_shims() {
 
 # The inverse of link_shims, removing only what that function would have
 # created and leaving anything else of the same name alone
+#
 unlink_shims() {
 	local shim
 	for shim in aws aws_completer; do
@@ -290,6 +299,7 @@ unlink_shims() {
 # The line that activate adds to the startup file and deactivate removes from
 # it. The shims are referred to by name rather than by path, because the PATH
 # entry that self_install adds is what makes them reachable.
+#
 activation_line() {
 	echo 'complete -C aws_completer aws'
 }
@@ -297,6 +307,7 @@ activation_line() {
 # How awsclienv arrives in the first place: a shell reading it from a pipe
 # runs this. It downloads rather than copies itself, the shell having consumed
 # the pipe already, leaving nothing on disk to copy from.
+#
 self_install() {
 	local file line new_shell=false
 	mkdir -p "$install_dir"
@@ -367,6 +378,7 @@ activate() {
 
 # Takes the empty line that may precede the given one with it, while leaving
 # empty lines elsewhere in the file alone
+#
 remove_line() {
 	local file=$1 line=$2 tmp
 	if test -f "$file" && grep -qF "$line" "$file"; then
@@ -409,6 +421,7 @@ deactivate() {
 # copy of awsclienv it downloaded. It deactivates first, so that no shim is
 # left pointing at a file about to go, and it leaves the installed versions
 # where they are, having not been the one to put them there.
+#
 self_remove() {
 	local file
 	changed=false
