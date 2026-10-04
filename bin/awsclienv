@@ -253,15 +253,14 @@ startup_file() {
 }
 
 # Raised by the functions below when they actually change something, so that
-# the advice at the end of activate and deactivate is given only when there is
-# something for a new shell to pick up
+# the advice at the end of activate, deactivate and self-remove is given only
+# when there is something for a new shell to pick up
 #
 changed=false
 
 new_shell_advice() {
 	if test "$changed" = true; then
-		echo "Open a new shell for this to take effect, or run 'hash -r' in"
-		echo "this one to pick up the change to the shims right away"
+		echo "Open a new shell for this to take effect"
 	fi
 }
 
