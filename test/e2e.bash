@@ -85,21 +85,31 @@ in_shell 'command -v awsclienv'
 say "3. awsclienv activate, found on the PATH step 1 arranged"
 in_shell 'awsclienv activate'
 
-say "4. with no version installed, aws and purge say so and fail"
+say "4. running activate again leaves everything alone and says so"
+again=$(in_shell 'awsclienv activate')
+echo "$again"
+same "both shims are left alone" \
+	2 "$(grep -c "exists already" <<< "$again" || true)"
+same "the startup file is left alone" \
+	1 "$(grep -c "invokes awsclienv already" <<< "$again" || true)"
+same "and nothing is said about a new shell" \
+	0 "$(grep -c "Open a new shell" <<< "$again" || true)"
+
+say "5. with no version installed, aws and purge say so and fail"
 no_version="No AWS CLI v2 version is currently installed"
 expect_failure aws 'aws --version' "$no_version"
 expect_failure purge 'awsclienv purge' "$no_version"
 
-say "5. that awsclienv installs the most recent AWS CLI version"
+say "6. that awsclienv installs the most recent AWS CLI version"
 in_shell 'awsclienv install' | grep -Ev '^ *[0-9 %]|Dload|Current'
 latest=$(basename "$(echo "$scratch/.awsclienv/versions"/*)")
 
-say "6. the shims step 3 linked run the version step 5 installed"
+say "7. the shims step 3 linked run the version step 6 installed"
 in_shell 'type -a aws; aws --version'
 in_shell 'COMP_LINE="aws s3 l" COMP_POINT=8 aws_completer'
 same "shim runs the installed version" "$latest" "$(version_of_aws '')"
 
-say "7. a second version, pinned with AWSCLIENV_VERSION"
+say "8. a second version, pinned with AWSCLIENV_VERSION"
 in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv install" \
 	| grep -Ev '^ *[0-9 %]|Dload|Current'
 same "pinned shim runs the pin" \
@@ -107,7 +117,7 @@ same "pinned shim runs the pin" \
 same "unpinned shim still runs the most recent" \
 	"$latest" "$(version_of_aws '')"
 
-say "8. installing a version that is already there leaves it alone"
+say "9. installing a version that is already there leaves it alone"
 before=$(stat -f %m "$scratch/.awsclienv/versions/$pinned")
 again=$(in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv install")
 echo "$again"
@@ -116,18 +126,28 @@ same "it says the version is already installed" \
 same "and the version itself is untouched" \
 	"$before" "$(stat -f %m "$scratch/.awsclienv/versions/$pinned")"
 
-say "9. list reports both, oldest first"
+say "10. list reports both, oldest first"
 in_shell 'awsclienv list'
 listed=$(in_shell 'awsclienv list 2>/dev/null' \
 	| sed 's/.*=//' | tr '\n' ' ' | sed 's/ $//')
 same "list is oldest first" "$pinned $latest" "$listed"
 
-say "10. purge keeps the pin and deletes the rest"
+say "11. purge keeps the pin and deletes the rest"
 in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv purge"
 same "only the pin remains" \
 	"$pinned" "$(ls "$scratch/.awsclienv/versions" | tr '\n' ' ' | sed 's/ $//')"
 
-say "11. deactivate unwinds step 3"
+say "12. deactivate unwinds step 3"
 in_shell 'awsclienv deactivate; type -a aws || echo "aws: gone, as expected"'
+
+say "13. running deactivate again leaves everything alone and says so"
+again=$(in_shell 'awsclienv deactivate')
+echo "$again"
+same "both shims are gone already" \
+	2 "$(grep -c "does not exist, leaving it alone" <<< "$again" || true)"
+same "the startup file is left alone" \
+	1 "$(grep -c "does not invoke awsclienv" <<< "$again" || true)"
+same "and nothing is said about a new shell" \
+	0 "$(grep -c "Open a new shell" <<< "$again" || true)"
 
 say "passed"

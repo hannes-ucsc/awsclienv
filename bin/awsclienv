@@ -223,6 +223,18 @@ startup_file() {
 	fi
 }
 
+# Raised by the functions below when they actually change something, so that
+# the advice at the end of activate and deactivate is given only when there is
+# something for a new shell to pick up
+changed=false
+
+new_shell_advice() {
+	if test "$changed" = true; then
+		echo "Open a new shell for this to take effect, or run 'hash -r' in"
+		echo "this one to pick up the change to the shims right away"
+	fi
+}
+
 link_shims() {
 	local shim
 	for shim in aws aws_completer; do
@@ -231,6 +243,7 @@ link_shims() {
 		else
 			ln -s awsclienv "$bin/$shim"
 			echo "Linked $bin/$shim to awsclienv"
+			changed=true
 		fi
 	done
 }
@@ -243,6 +256,7 @@ unlink_shims() {
 		if test -L "$bin/$shim" && test "$(readlink "$bin/$shim")" = awsclienv; then
 			rm "$bin/$shim"
 			echo "Unlinked $bin/$shim"
+			changed=true
 		elif test -e "$bin/$shim" || test -L "$bin/$shim"; then
 			echo "$bin/$shim is not a link to awsclienv, leaving it alone"
 		else
@@ -260,6 +274,7 @@ activation_line() {
 
 activate() {
 	local file line
+	changed=false
 	file=$(startup_file)
 	line=$(activation_line)
 	link_shims
@@ -269,13 +284,14 @@ activate() {
 		printf '\n%s\n' "$line" >> "$file"
 		echo "Added to $file:"
 		echo "    $line"
+		changed=true
 	fi
-	echo "Open a new shell for this to take effect, or run 'hash -r' in"
-	echo "this one to pick up the change to the shims right away"
+	new_shell_advice
 }
 
 deactivate() {
 	local file line tmp
+	changed=false
 	file=$(startup_file)
 	line=$(activation_line)
 	unlink_shims
@@ -297,11 +313,11 @@ deactivate() {
 		rm -f "$tmp"
 		echo "Removed from $file:"
 		echo "    $line"
+		changed=true
 	else
 		echo "$file does not invoke awsclienv, leaving it alone"
 	fi
-	echo "Open a new shell for this to take effect, or run 'hash -r' in"
-	echo "this one to pick up the change to the shims right away"
+	new_shell_advice
 }
 
 if test "$name" != awsclienv; then
