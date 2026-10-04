@@ -19,13 +19,13 @@ Usage:
   awsclienv activate
       Install the shims and set up tab completion in bash's startup file
   awsclienv install
-      Install the version named by AWSCLIENV_VERSION, or, if that variable is
-      not set, the most recent version available
+      Install the version specified by AWSCLIENV_VERSION, or, if that variable
+      is not set, the most recent version available
   awsclienv list
       List the versions installed locally, oldest first
   awsclienv purge
       Delete every installed version except the one that AWSCLIENV_VERSION
-      names, or the most recent one if that variable is not set
+      specifies, or the most recent installed one if that variable is not set
   awsclienv deactivate
       Undo the effect of activate
 EOF
@@ -68,10 +68,10 @@ selected_version() {
 	fi
 }
 
-# The most recent version there is, which the CHANGELOG names in its first few
-# lines, so that a range request over those suffices. The response is captured
-# before being parsed, because an awk that stopped reading early would leave
-# curl with a broken pipe, and that fails the whole pipeline under pipefail.
+# The most recent version there is, which the CHANGELOG specifies in its first
+# few lines, so that a range request over those suffices. The response is
+# captured before being parsed, because an awk that stopped reading early would
+# leave curl with a broken pipe, failing the whole pipeline under pipefail.
 latest_version() {
 	local head version
 	head=$(curl --fail --silent --show-error --location \
@@ -266,8 +266,8 @@ unlink_shims() {
 }
 
 # The line that activate adds to the startup file and deactivate removes from
-# it. The shims are named rather than spelled out, because the PATH entry that
-# install.bash adds is what makes them reachable.
+# it. The shims are referred to by name rather than by path, because the PATH
+# entry that install.bash adds is what makes them reachable.
 activation_line() {
 	echo 'complete -C aws_completer aws'
 }

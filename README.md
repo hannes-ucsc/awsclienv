@@ -47,9 +47,9 @@ $ type -a aws
 aws is /Users/you/.awsclienv/bin/aws
 ```
 
-It should print one line, naming `~/.awsclienv/bin`. Any additional lines point
-to installations you should remove, especially if they precede the expected
-line, as they will shadow the shim.
+It should print one line, specifying `~/.awsclienv/bin`. Any additional
+lines point to installations you should remove, especially if they precede
+the expected line, as they will shadow the shim.
 
 `awsclienv deactivate` reverses this, removing the shims and deregistering the
 tab completion. It leaves `awsclienv` and any versions it installed in place.
@@ -165,9 +165,10 @@ To reclaim the space taken up by installed versions you no longer use:
 awsclienv purge
 ```
 
-That deletes every installed version but the one `AWSCLIENV_VERSION` names,
-or the most recent one if the variable is not set. It refuses to run if the
-version named is not installed, rather than leaving you with none at all.
+That deletes every installed version but the one `AWSCLIENV_VERSION`
+specifies, or the most recent one if the variable is not set. It refuses to
+run if the version specified is not installed, rather than leaving you with
+none at all.
 
 To remove one version in particular, delete its directory:
 
