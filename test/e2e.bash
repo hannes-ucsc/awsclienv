@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# End to end, on macOS: install.bash installs awsclienv, the installed
+# End to end, on macOS: awsclienv piped to a shell installs itself, that
 # awsclienv installs the AWS CLI, and the shims run it. Every step consumes
 # what the step before it produced, and every step after the first runs in a
-# login shell, so that the PATH comes from the startup file install.bash
+# login shell, so that the PATH comes from the startup file the first step
 # wrote, rather than from this script.
 #
 # It all happens in a scratch HOME that is removed afterwards, leaving the
@@ -37,8 +37,9 @@ in_shell() {
 		| grep -v "job control\|terminal process"
 }
 
-install_bash() {
-	curl -fsSL "file://$repo/install.bash" \
+# awsclienv installs itself when a shell reads it from a pipe
+pipe_to_shell() {
+	curl -fsSL "file://$repo/bin/awsclienv" \
 		| HOME=$scratch AWSCLIENV_BASE_URL="file://$repo" bash
 }
 
@@ -73,11 +74,11 @@ expect_failure() {
 	fi
 }
 
-say "1. install.bash, as the README gives it"
-install_bash
+say "1. awsclienv piped to a shell, as the README gives it"
+pipe_to_shell
 
-say "2. running it again adds nothing and breaks nothing"
-install_bash
+say "2. piping it again adds nothing and breaks nothing"
+pipe_to_shell
 same "the PATH line appears once" \
 	1 "$(grep -cF "$path_line" "$scratch/.bash_profile")"
 in_shell 'command -v awsclienv'

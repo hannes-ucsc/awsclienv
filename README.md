@@ -19,7 +19,7 @@ macOS and Bash.
 ## Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hannes-ucsc/awsclienv/main/install.bash | bash
+curl -fsSL https://raw.githubusercontent.com/hannes-ucsc/awsclienv/main/bin/awsclienv | bash
 ```
 
 This downloads `awsclienv` to `~/.awsclienv/bin` and puts that directory on
@@ -104,7 +104,8 @@ export AWSCLIENV_VERSION=2.37.9
 
 ## Installing by hand
 
-The installer does nothing you cannot do yourself. Download `awsclienv`:
+Piping it to a shell does nothing you cannot do yourself. Download the same
+file instead:
 
 ```bash
 mkdir -p ~/.awsclienv/bin

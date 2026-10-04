@@ -6,10 +6,14 @@
 set -o errexit -o nounset -o pipefail
 
 versions=$HOME/.awsclienv/versions
+install_dir=$HOME/.awsclienv/bin
 changelog_url=https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst
+default_base_url=https://raw.githubusercontent.com/hannes-ucsc/awsclienv/main
+base_url=${AWSCLIENV_BASE_URL:-$default_base_url}
 
 # The name this script was invoked by, and the directory that name lives in,
-# which is where its other names live, too
+# which is where its other names live, too. Neither means anything when a
+# shell is reading this from a pipe, and neither is consulted then.
 name=$(basename "$0")
 bin=$(cd "$(dirname "$0")" && pwd)
 
@@ -283,9 +287,50 @@ unlink_shims() {
 
 # The line that activate adds to the startup file and deactivate removes from
 # it. The shims are referred to by name rather than by path, because the PATH
-# entry that install.bash adds is what makes them reachable.
+# entry that self_install adds is what makes them reachable.
 activation_line() {
 	echo 'complete -C aws_completer aws; complete -C awsclienv awsclienv'
+}
+
+# How awsclienv arrives in the first place: a shell reading it from a pipe
+# runs this. It downloads rather than copies itself, the shell having consumed
+# the pipe already, leaving nothing on disk to copy from.
+self_install() {
+	local file line
+	mkdir -p "$install_dir"
+	curl --fail --silent --show-error --location \
+		--output "$install_dir/awsclienv.download" \
+		"$base_url/bin/awsclienv"
+	# Only a complete download replaces an installed awsclienv, so that a
+	# failure part way through leaves the working copy alone
+	chmod +x "$install_dir/awsclienv.download"
+	mv "$install_dir/awsclienv.download" "$install_dir/awsclienv"
+	echo "Downloaded awsclienv to $install_dir"
+
+	file=$(startup_file)
+	# Not the expanded path, so that the line survives a different home
+	# directory
+	line='export PATH="$HOME/.awsclienv/bin:$PATH"'
+	if test -f "$file" && grep -qF "$line" "$file"; then
+		echo "$file puts $install_dir on the PATH already"
+	else
+		printf '\n%s\n' "$line" >> "$file"
+		echo "Added $install_dir to the PATH in $file"
+	fi
+
+	echo
+	# Whether a new shell is needed is a question about the PATH of the shell
+	# that ran this, which it cannot change, only that of shells started from
+	# now on
+	case ":${PATH:-}:" in
+		*":$install_dir:"*)
+			echo "Next, run 'awsclienv activate'"
+			;;
+		*)
+			echo "Open a new shell, then run 'awsclienv activate'"
+			;;
+	esac
+	echo
 }
 
 activate() {
@@ -336,7 +381,12 @@ deactivate() {
 	new_shell_advice
 }
 
-if test "$name" != awsclienv; then
+if test ${#BASH_SOURCE[@]} -eq 0; then
+	# No source file, so a shell is reading this from a pipe, which is how
+	# awsclienv is installed. The test comes first because $0 is then the
+	# shell, which the dispatch on the name below would take for a shim.
+	self_install
+elif test "$name" != awsclienv; then
 	run "$@"
 elif test -n "${COMP_LINE:-}"; then
 	complete_subcommand "${1:-}" "${2:-}" "${3:-}"
