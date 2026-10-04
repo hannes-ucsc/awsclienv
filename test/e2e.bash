@@ -125,7 +125,7 @@ complete_as() {
 	in_shell "COMP_LINE='awsclienv $1' awsclienv awsclienv '$2' '$3'"
 }
 same "an empty word offers every subcommand" \
-	"activate install list purge deactivate self-remove" \
+	"activate install list purge deactivate self-update self-remove" \
 	"$(complete_as '' '' awsclienv | tr '\n' ' ' | sed 's/ $//')"
 same "a prefix narrows it" \
 	deactivate "$(complete_as de de awsclienv)"
@@ -174,10 +174,26 @@ in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv purge"
 same "only the pin remains" \
 	"$pinned" "$(ls "$scratch/.awsclienv/versions" | tr '\n' ' ' | sed 's/ $//')"
 
-say "14. deactivate unwinds step 4"
+say "14. self-update replaces the installed awsclienv"
+update() {
+	HOME=$scratch AWSCLIENV_BASE_URL="file://$repo" \
+		"$scratch/.awsclienv/bin/awsclienv" self-update
+}
+printf '\n# not the current one\n' >> "$scratch/.awsclienv/bin/awsclienv"
+updated=$(update)
+echo "$updated"
+same "the installed copy is replaced with the source" \
+	"" "$(cmp "$scratch/.awsclienv/bin/awsclienv" "$repo/bin/awsclienv" || true)"
+same "and nothing sends the user off to activate" \
+	0 "$(grep -c "awsclienv activate" <<< "$updated" || true)"
+updated=$(update)
+same "an update that changes nothing says nothing of a new shell" \
+	0 "$(grep -c "Open a new shell" <<< "$updated" || true)"
+
+say "15. deactivate unwinds step 4"
 in_shell 'awsclienv deactivate; type -a aws || echo "aws: gone, as expected"'
 
-say "15. running deactivate again leaves everything alone and says so"
+say "16. running deactivate again leaves everything alone and says so"
 again=$(in_shell 'awsclienv deactivate')
 echo "$again"
 same "both shims are gone already" \
@@ -187,7 +203,7 @@ same "the startup file is left alone" \
 same "and nothing is said about a new shell" \
 	0 "$(grep -c "Open a new shell" <<< "$again" || true)"
 
-say "16. self-remove takes back what the install added"
+say "17. self-remove takes back what the install added"
 # Last, because it deletes the awsclienv under test: a later step that
 # looked it up on the PATH would find the one installed on this machine
 # and act on that instead

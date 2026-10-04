@@ -179,6 +179,18 @@ rm -rf ~/.awsclienv/versions/2.36.38
 ```
 
 
+## Updating
+
+```bash
+awsclienv self-update
+```
+
+That pipes the `awsclienv` at the URL it was installed from to a shell, which
+is what installed it in the first place. It replaces the installed copy and
+adds any line to your startup file that a newer `awsclienv` wants and an
+older one did not.
+
+
 ## Deinstallation
 
 To undo the install:
