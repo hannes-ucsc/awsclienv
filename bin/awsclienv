@@ -108,7 +108,7 @@ list_versions() {
 		exit 1
 	else
 		echo "To pin this shell to a locally installed version, copy one of" >&2
-		echo "the commands listed below and paste it into the shell prompt." >&2
+		echo "the commands listed below and paste it into the shell prompt" >&2
 		echo >&2
 		# As assignments, so that a line can be copied into the shell as is
 		sed 's/^/export AWSCLIENV_VERSION=/' <<< "$installed"
@@ -149,7 +149,7 @@ run() {
 	elif test -x "$versions/$version/aws-cli/$name"; then
 		exec "$versions/$version/aws-cli/$name" "$@"
 	elif test -d "$versions/$version"; then
-		echo "AWS CLI v2 version $version does not provide $name." >&2
+		echo "AWS CLI v2 version $version does not provide $name" >&2
 		exit 1
 	else
 		echo "AWS CLI v2 version $version is not installed." >&2
@@ -271,7 +271,7 @@ activate() {
 		echo "    $line"
 	fi
 	echo "Open a new shell for this to take effect, or run 'hash -r' in"
-	echo "this one to pick up the change to the shims right away."
+	echo "this one to pick up the change to the shims right away"
 }
 
 deactivate() {
@@ -301,7 +301,7 @@ deactivate() {
 		echo "$file does not invoke awsclienv, leaving it alone"
 	fi
 	echo "Open a new shell for this to take effect, or run 'hash -r' in"
-	echo "this one to pick up the change to the shims right away."
+	echo "this one to pick up the change to the shims right away"
 }
 
 if test "$name" != awsclienv; then

@@ -53,12 +53,10 @@ echo
 # started from now on.
 case ":${PATH:-}:" in
 	*":$bin:"*)
-		echo "Next, run"
+		echo "Next, run 'awsclienv activate'"
 		;;
 	*)
-		echo "Open a new shell, then run"
+		echo "Open a new shell, then run 'awsclienv activate'"
 		;;
 esac
-echo
-echo "    awsclienv activate"
 echo
