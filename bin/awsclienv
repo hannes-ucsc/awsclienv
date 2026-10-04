@@ -179,19 +179,13 @@ list_versions() {
 
 purge_versions() {
 	local keep installed version
-	keep=$(selected_version)
-	# Nothing to purge is nothing to go wrong, as against a version to keep
-	# that is not there, which is an instruction that cannot be carried out
-	if test -z "$keep"; then
+	installed=$(installed_versions)
+	if test -z "$installed"; then
 		no_version_installed
-	elif test ! -d "$versions/$keep"; then
-		# Purging towards a version that isn't there would delete every
-		# version and leave none, which is never what was meant
-		echo "AWS CLI v2 version $keep is not installed, so purging would" >&2
-		echo "leave none at all. Install it, or unset AWSCLIENV_VERSION." >&2
-		exit 1
 	else
-		installed=$(installed_versions)
+		# Every installed version but the one specified, which excepts
+		# nothing where the one specified is not installed
+		keep=$(selected_version)
 		while read -r version; do
 			if test "$version" = "$keep"; then
 				echo "Kept $versions/$version"

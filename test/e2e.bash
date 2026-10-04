@@ -50,6 +50,13 @@ version_of_aws() {
 	in_shell "$1 aws --version" | sed -n 's#^aws-cli/\([^ ]*\) .*#\1#p'
 }
 
+# A version directory that is enough for awsclienv to count as installed
+stub_version() {
+	mkdir -p "$scratch/.awsclienv/versions/$1/aws-cli"
+	printf '#!/bin/bash\n' > "$scratch/.awsclienv/versions/$1/aws-cli/aws"
+	chmod +x "$scratch/.awsclienv/versions/$1/aws-cli/aws"
+}
+
 same() {
 	if test "$2" != "$3"; then
 		echo "$1: expected $2, got $3" >&2
@@ -211,6 +218,13 @@ say "14. purge keeps the pin and deletes the rest"
 in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv purge"
 same "only the pin remains" \
 	"$pinned" "$(ls "$scratch/.awsclienv/versions" | tr '\n' ' ' | sed 's/ $//')"
+# A version specified but not installed excepts nothing from the purge
+stub_version 1.0.0
+in_shell "export AWSCLIENV_VERSION=9.9.9; awsclienv purge"
+same "a version that is not installed excepts nothing" \
+	"" "$(ls "$scratch/.awsclienv/versions")"
+# Put one back, the steps below having something to say about versions
+stub_version "$pinned"
 
 say "15. self-update replaces the installed awsclienv"
 update() {
