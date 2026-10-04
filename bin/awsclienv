@@ -1,16 +1,7 @@
 #!/bin/bash
 
-# Manage side-by-side installations of the AWS CLI v2 on macOS.
-#
-# Invoked as `awsclienv`, this script installs releases and wires itself into
-# the shell. Invoked as `aws` or `aws_completer`, names it links to itself, it
-# runs the executable of that name from the selected release. The selected
-# release is the one named by AWSCLIENV_VERSION or, if that variable is not
-# set, the most recent installed one.
-#
-# Releases are installed from the official macOS package, each relocated to a
-# directory of its own below ~/.awsclienv/versions by a choices file. That
-# relocation also makes the installation per-user, so none of this needs root.
+# Manage side-by-side installations of the AWS CLI v2 on macOS, as documented
+# in README.md.
 
 set -o errexit -o nounset -o pipefail
 
@@ -26,18 +17,17 @@ usage() {
 	cat <<EOF
 Usage:
   awsclienv activate
-      Link the shims and register their completions in bash's startup file
+      Install the shims and set up tab completion in bash's startup file
   awsclienv install
-      Install the release named by AWSCLIENV_VERSION, or the most recent
-      release there is if that variable is not set
+      Install the version named by AWSCLIENV_VERSION, or, if that variable is
+      not set, the most recent version available
   awsclienv list
-      Print an AWSCLIENV_VERSION assignment per installed release, oldest
-      first
+      List the versions installed locally, oldest first
   awsclienv purge
-      Delete every installed release but the one that AWSCLIENV_VERSION
+      Delete every installed version except the one that AWSCLIENV_VERSION
       names, or the most recent one if that variable is not set
   awsclienv deactivate
-      Unlink the shims and remove the line that activate added
+      Undo the effect of activate
 EOF
 }
 
@@ -51,7 +41,7 @@ check_no_args() {
 	fi
 }
 
-# The installed releases, one per line, oldest first. Sorting by numeric
+# The installed versions, one per line, oldest first. Sorting by numeric
 # version component, not lexicographically, so that 2.36.9 precedes 2.36.38.
 installed_versions() {
 	for dir in "$versions"/*; do
@@ -61,13 +51,13 @@ installed_versions() {
 	done | sort -t. -k1,1n -k2,2n -k3,3n
 }
 
-no_release_installed() {
-	echo "No AWS CLI v2 release is currently installed." >&2
+no_version_installed() {
+	echo "No AWS CLI v2 version is currently installed." >&2
 	echo "Run 'awsclienv install' to install one." >&2
 }
 
-# The release to run, which is empty only if the variable is unset and no
-# release is installed
+# The version to run, which is empty only if the variable is unset and no
+# version is installed
 selected_version() {
 	if test -n "${AWSCLIENV_VERSION:-}"; then
 		echo "$AWSCLIENV_VERSION"
@@ -78,7 +68,7 @@ selected_version() {
 	fi
 }
 
-# The most recent release there is, which the CHANGELOG names in its first few
+# The most recent version there is, which the CHANGELOG names in its first few
 # lines, so that a range request over those suffices. The response is captured
 # before being parsed, because an awk that stopped reading early would leave
 # curl with a broken pipe, and that fails the whole pipeline under pipefail.
@@ -92,7 +82,7 @@ latest_version() {
 		     { prev = $0 }' <<< "$head"
 	)
 	if test -z "$version"; then
-		echo "Could not tell the latest release from $changelog_url" >&2
+		echo "Could not tell the latest version from $changelog_url" >&2
 		exit 1
 	else
 		echo "$version"
@@ -101,9 +91,9 @@ latest_version() {
 
 # Everything but the assignments goes to stderr, leaving stdout machine
 # readable, and evaluable at that
-available_releases() {
+available_versions() {
 	echo >&2
-	echo "Releases available for installation are listed at" >&2
+	echo "Versions available for installation are listed at" >&2
 	echo >&2
 	echo "$changelog_url" >&2
 	echo >&2
@@ -112,12 +102,12 @@ available_releases() {
 list_versions() {
 	local installed
 	installed=$(installed_versions)
-	available_releases
+	available_versions
 	if test -z "$installed"; then
-		no_release_installed
+		no_version_installed
 		exit 1
 	else
-		echo "To pin this shell to a locally installed release, copy one of" >&2
+		echo "To pin this shell to a locally installed version, copy one of" >&2
 		echo "the commands listed below and paste it into the shell prompt." >&2
 		echo >&2
 		# As assignments, so that a line can be copied into the shell as is
@@ -125,16 +115,16 @@ list_versions() {
 	fi
 }
 
-purge_releases() {
+purge_versions() {
 	local keep installed version
 	keep=$(selected_version)
 	if test -z "$keep"; then
-		no_release_installed
+		no_version_installed
 		exit 1
 	elif test ! -d "$versions/$keep"; then
-		# Purging towards a release that isn't there would delete every
-		# release and leave none, which is never what was meant
-		echo "AWS CLI v2 release $keep is not installed, so purging would" >&2
+		# Purging towards a version that isn't there would delete every
+		# version and leave none, which is never what was meant
+		echo "AWS CLI v2 version $keep is not installed, so purging would" >&2
 		echo "leave none at all. Install it, or unset AWSCLIENV_VERSION." >&2
 		exit 1
 	else
@@ -154,27 +144,27 @@ run() {
 	local version
 	version=$(selected_version)
 	if test -z "$version"; then
-		no_release_installed
+		no_version_installed
 		exit 1
 	elif test -x "$versions/$version/aws-cli/$name"; then
 		exec "$versions/$version/aws-cli/$name" "$@"
 	elif test -d "$versions/$version"; then
-		echo "AWS CLI v2 release $version does not provide $name." >&2
+		echo "AWS CLI v2 version $version does not provide $name." >&2
 		exit 1
 	else
-		echo "AWS CLI v2 release $version is not installed." >&2
+		echo "AWS CLI v2 version $version is not installed." >&2
 		echo "Run 'awsclienv install' to install it." >&2
 		exit 1
 	fi
 }
 
-install_release() {
+install_version() {
 	local version prefix tmp
 	if test -n "${AWSCLIENV_VERSION:-}"; then
 		version=$AWSCLIENV_VERSION
 	else
 		version=$(latest_version)
-		echo "AWSCLIENV_VERSION is not set, so installing the latest release"
+		echo "AWSCLIENV_VERSION is not set, so installing the latest version"
 	fi
 	prefix=$versions/$version
 	if test -x "$prefix/aws-cli/aws"; then
@@ -184,6 +174,9 @@ install_release() {
 		trap 'rm -rf "$tmp"' EXIT
 		curl --fail --location --output "$tmp/awscli.pkg" \
 			"https://awscli.amazonaws.com/AWSCLIV2-$version.pkg"
+		# The choices file is what relocates the package into $prefix. Left
+		# to itself the package installs into /usr/local, which would need
+		# root and would leave no room for a second version.
 		cat > "$tmp/choices.xml" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -202,7 +195,7 @@ install_release() {
 EOF
 		# The installer rejects the choices file unless the custom location
 		# exists, so the directory is created up front, and removed again if
-		# the install fails, leaving no half-installed release behind.
+		# the install fails, leaving no half-installed version behind.
 		mkdir -p "$prefix"
 		trap 'rm -rf "$tmp" "$prefix"' EXIT
 		installer -pkg "$tmp/awscli.pkg" \
@@ -323,13 +316,13 @@ else
 		activate
 	elif test "$subcommand" = install; then
 		check_no_args "$subcommand" "$@"
-		install_release
+		install_version
 	elif test "$subcommand" = list; then
 		check_no_args "$subcommand" "$@"
 		list_versions
 	elif test "$subcommand" = purge; then
 		check_no_args "$subcommand" "$@"
-		purge_releases
+		purge_versions
 	elif test "$subcommand" = deactivate; then
 		check_no_args "$subcommand" "$@"
 		deactivate

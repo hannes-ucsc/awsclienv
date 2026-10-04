@@ -11,15 +11,15 @@
 # points at the working copy, so that the files under test are the ones on
 # disk rather than the published ones.
 #
-# Two releases are installed: one with AWSCLIENV_VERSION unset, which resolves
-# the most recent release from the upstream CHANGELOG, and one with the
-# variable set to the release below. Each costs a download of the package,
+# Two versions are installed: one with AWSCLIENV_VERSION unset, which resolves
+# the most recent version from the upstream CHANGELOG, and one with the
+# variable set to the version below. Each costs a download of the package,
 # some 60 MB, on every run. The repeated runs that test for idempotence
 # download nothing, which is the point of them.
 
 set -o errexit -o nounset -o pipefail
 
-# Any published release older than the most recent one will do
+# Any published version older than the most recent one will do
 pinned=2.36.38
 
 path_line='export PATH="$HOME/.awsclienv/bin:$PATH"'
@@ -42,7 +42,7 @@ install_bash() {
 		| HOME=$scratch AWSCLIENV_BASE_URL="file://$repo" bash
 }
 
-# The release that the shim runs, under the environment given
+# The version that the shim runs, under the environment given
 version_of_aws() {
 	in_shell "$1 aws --version" | sed -n 's#^aws-cli/\([^ ]*\) .*#\1#p'
 }
@@ -85,20 +85,21 @@ in_shell 'command -v awsclienv'
 say "3. awsclienv activate, found on the PATH step 1 arranged"
 in_shell 'awsclienv activate'
 
-say "4. with no release installed, aws and purge say so and fail"
-no_release="No AWS CLI v2 release is currently installed"
-expect_failure aws 'aws --version' "$no_release"
-expect_failure purge 'awsclienv purge' "$no_release"
+say "4. with no version installed, aws and purge say so and fail"
+no_version="No AWS CLI v2 version is currently installed"
+expect_failure aws 'aws --version' "$no_version"
+expect_failure purge 'awsclienv purge' "$no_version"
 
-say "5. that awsclienv installs the most recent AWS CLI release"
+say "5. that awsclienv installs the most recent AWS CLI version"
 in_shell 'awsclienv install' | grep -Ev '^ *[0-9 %]|Dload|Current'
 latest=$(basename "$(echo "$scratch/.awsclienv/versions"/*)")
 
-say "6. the shims step 3 linked run the release step 5 installed"
-in_shell 'type -a aws; aws --version; COMP_LINE="aws s3 l" COMP_POINT=8 aws_completer'
-same "shim runs the installed release" "$latest" "$(version_of_aws '')"
+say "6. the shims step 3 linked run the version step 5 installed"
+in_shell 'type -a aws; aws --version'
+in_shell 'COMP_LINE="aws s3 l" COMP_POINT=8 aws_completer'
+same "shim runs the installed version" "$latest" "$(version_of_aws '')"
 
-say "7. a second release, pinned with AWSCLIENV_VERSION"
+say "7. a second version, pinned with AWSCLIENV_VERSION"
 in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv install" \
 	| grep -Ev '^ *[0-9 %]|Dload|Current'
 same "pinned shim runs the pin" \
@@ -106,20 +107,20 @@ same "pinned shim runs the pin" \
 same "unpinned shim still runs the most recent" \
 	"$latest" "$(version_of_aws '')"
 
-say "8. installing a release that is already there leaves it alone"
+say "8. installing a version that is already there leaves it alone"
 before=$(stat -f %m "$scratch/.awsclienv/versions/$pinned")
 again=$(in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv install")
 echo "$again"
-same "it says the release is already installed" \
+same "it says the version is already installed" \
 	1 "$(grep -c "already installed" <<< "$again")"
-same "and the release itself is untouched" \
+same "and the version itself is untouched" \
 	"$before" "$(stat -f %m "$scratch/.awsclienv/versions/$pinned")"
 
 say "9. list reports both, oldest first"
 in_shell 'awsclienv list'
-same "list is oldest first" \
-	"$pinned $latest" \
-	"$(in_shell 'awsclienv list 2>/dev/null' | sed 's/.*=//' | tr '\n' ' ' | sed 's/ $//')"
+listed=$(in_shell 'awsclienv list 2>/dev/null' \
+	| sed 's/.*=//' | tr '\n' ' ' | sed 's/ $//')
+same "list is oldest first" "$pinned $latest" "$listed"
 
 say "10. purge keeps the pin and deletes the rest"
 in_shell "export AWSCLIENV_VERSION=$pinned; awsclienv purge"

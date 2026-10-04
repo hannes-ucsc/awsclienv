@@ -1,12 +1,14 @@
 # awsclienv
 
-Install and switch between specific releases of the AWS CLI v2 on macOS.
+Install and switch between specific versions of the AWS CLI v2 on macOS.
 
-AWS publishes a macOS package per release, but installing it replaces the
-previously installed version. `awsclienv` manages multiple versions installed
-side-by-side, allowing you to select one of them by setting an environment
-variable. This is similar to what `pyenv` does for Python, and `tfenv` for
-Terraform.
+AWS publishes an installer package for macOS but using it replaces the
+previously installed version. Luckily, AWS retains older versions on their
+download server and the installer can be instructed to use a custom destination
+directory. `awsclienv` manages multiple versions installed side-by-side,
+allowing you to select one of them by setting an environment variable. This is
+similar to what `pyenv` does for Python, and `tfenv` for Terraform. Nothing is
+installed outside your home directory, and root privileges are not required.
 
 
 ## Requirements
@@ -50,7 +52,7 @@ to installations you should remove, especially if they precede the expected
 line, as they will shadow the shim.
 
 `awsclienv deactivate` reverses this, removing the shims and deregistering the
-tab completion. It leaves `awsclienv` and any releases it installed in place.
+tab completion. It leaves `awsclienv` and any versions it installed in place.
 
 
 ## Usage
@@ -79,20 +81,20 @@ aws-cli/2.36.38 Python/3.14.6 Darwin/24.6.0 exe/arm64
 ```
 
 `AWSCLIENV_VERSION` is read on every invocation, so changing it switches
-releases immediately, with no further installation as long as the release is
+versions immediately, with no further installation as long as the version is
 already present. Installing is idempotent, so running `awsclienv install`
-against a release you already have costs nothing.
+against a version you already have costs nothing.
 
-To see which releases you have:
+To see which versions you have:
 
 ```bash
 $ awsclienv list
 
-Releases available for installation are listed at
+Versions available for installation are listed at
 
 https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst
 
-To pin this shell to a locally installed release, copy one of
+To pin this shell to a locally installed version, copy one of
 the commands listed below and paste it into the shell prompt.
 
 export AWSCLIENV_VERSION=2.36.38
@@ -137,9 +139,9 @@ aws is /Users/you/.awsclienv/bin/aws
 Continue to the [Usage](#usage) section above.
 
 
-## Where installed releases are located
+## Installation layout
 
-Each release is installed in a directory underneath `~/.awsclienv/versions`,
+Each version is installed in a directory underneath `~/.awsclienv/versions`,
 and takes up about 230 MiB of space on disk.
 
 ```
@@ -155,19 +157,19 @@ and takes up about 230 MiB of space on disk.
 
 Only the `bin` directory is on your `PATH`, and the two shims in it are
 symlinks to `awsclienv`, which runs the executable of the same name from the
-selected release. No release is ever on your `PATH`.
+selected version. No version is ever on your `PATH`.
 
-To reclaim the space taken by releases you no longer use:
+To reclaim the space taken up by installed versions you no longer use:
 
 ```bash
 awsclienv purge
 ```
 
-That deletes every installed release but the one `AWSCLIENV_VERSION` names,
+That deletes every installed version but the one `AWSCLIENV_VERSION` names,
 or the most recent one if the variable is not set. It refuses to run if the
-release named is not installed, rather than leaving you with none at all.
+version named is not installed, rather than leaving you with none at all.
 
-To remove one release in particular, delete its directory:
+To remove one version in particular, delete its directory:
 
 ```bash
 rm -rf ~/.awsclienv/versions/2.36.38
@@ -176,7 +178,7 @@ rm -rf ~/.awsclienv/versions/2.36.38
 
 ## Deinstallation
 
-To remove `awsclienv` itself, along with every release it installed, start by
+To remove `awsclienv` itself, along with every version it installed, start by
 undoing the activation:
 
 ```bash
