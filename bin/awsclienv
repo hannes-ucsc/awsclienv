@@ -21,7 +21,7 @@ usage() {
 	cat <<EOF
 Usage:
   awsclienv activate
-      Install the shims and set up tab completion in bash's startup file
+      Install the shims and set up tab completion for the AWS CLI
   awsclienv install
       Install the version specified by AWSCLIENV_VERSION, or, if that variable
       is not set, the most recent version available
@@ -289,7 +289,7 @@ unlink_shims() {
 # it. The shims are referred to by name rather than by path, because the PATH
 # entry that self_install adds is what makes them reachable.
 activation_line() {
-	echo 'complete -C aws_completer aws; complete -C awsclienv awsclienv'
+	echo 'complete -C aws_completer aws'
 }
 
 # How awsclienv arrives in the first place: a shell reading it from a pipe
@@ -316,6 +316,14 @@ self_install() {
 	else
 		printf '\n%s\n' "$line" >> "$file"
 		echo "Added $install_dir to the PATH in $file"
+	fi
+
+	line='complete -C awsclienv awsclienv'
+	if test -f "$file" && grep -qF "$line" "$file"; then
+		echo "$file completes awsclienv already"
+	else
+		printf '%s\n' "$line" >> "$file"
+		echo "Added completion for awsclienv to $file"
 	fi
 
 	echo

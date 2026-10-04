@@ -81,7 +81,13 @@ say "2. piping it again adds nothing and breaks nothing"
 pipe_to_shell
 same "the PATH line appears once" \
 	1 "$(grep -cF "$path_line" "$scratch/.bash_profile")"
+same "and so does the completion for awsclienv" \
+	1 "$(grep -cF 'complete -C awsclienv awsclienv' "$scratch/.bash_profile")"
 in_shell 'command -v awsclienv'
+
+completes_aws="complete -C aws_completer aws"
+same "aws is not completed yet, activate not having run" \
+	0 "$(grep -cF "$completes_aws" "$scratch/.bash_profile" || true)"
 
 say "3. awsclienv activate, found on the PATH step 1 arranged"
 in_shell 'awsclienv activate'

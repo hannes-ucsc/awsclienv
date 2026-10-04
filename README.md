@@ -126,7 +126,8 @@ and add these lines to your startup file:
 
 ```bash
 export PATH="$HOME/.awsclienv/bin:$PATH"
-complete -C aws_completer aws; complete -C awsclienv awsclienv
+complete -C awsclienv awsclienv
+complete -C aws_completer aws
 ```
 
 Open a new shell, and confirm that the shims have taken over, as under
@@ -187,7 +188,7 @@ undoing the activation:
 awsclienv deactivate
 ```
 
-Then delete the `PATH` line the installer added to your startup file, which is
+Then delete the two lines the install added to your startup file, which are
 the one thing `deactivate` does not account for, and finally:
 
 ```bash
